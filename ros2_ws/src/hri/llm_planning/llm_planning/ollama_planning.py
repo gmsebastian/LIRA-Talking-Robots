@@ -17,16 +17,11 @@ SM_INTERACTION = 60
 
 class OllamaPlanningNode(Node):
     def load_prompts(self, path):
-        lines = open(path).readlines()
-        prompts = []
-        for l in lines:
-            s = l.rstrip()
-            if(len(s)>3):
-                prompts.append(s)
-        return prompts
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read()
 
-    def send_prompt(self, msg):
-        self.msg_history.append({"role": "user", "content": msg})
+    def send_prompt(self, msg, role="user"):
+        self.msg_history.append({"role": role, "content": msg})
         resp = requests.post(self.url_api, json={"model": "llama3", "messages": self.msg_history, "stream":False, "options":{"num_ctx":8192}})
         self.msg_history.append(resp.json()["message"])
 
@@ -49,13 +44,17 @@ class OllamaPlanningNode(Node):
 
     def spin(self):
         prompts_file = os.path.join(get_package_share_directory('llm_planning'), "config","Prompts.txt")
-        prompts = self.load_prompts(prompts_file)
-        self.send_prompt("Genera respuestas de máximo veinte palabras")
-        for p in prompts:
-            self.get_logger().info("Sending prompt: " + p)
-            self.send_prompt(p)
-            self.get_logger().info("Response received: " + self.msg_history[-1]["content"])
-        self.send_prompt("Da respuestas muy sintetizadas y concisas")
+        
+        system_context = self.load_prompts(prompts_file)
+        
+        initial_setup = (
+            "Genera respuestas de máximo veinte palabras. Da respuestas muy sintetizadas y concisas.\n\n" + 
+            system_context
+        )
+        
+        self.get_logger().info("Sending initial context to Llama 3...")
+        self.send_prompt(initial_setup, role="system")
+        self.get_logger().info("Context initialized. Response: " + self.msg_history[-1]["content"])
         
         self.get_logger().info("Waiting for new prompt...")
         while rclpy.ok():
@@ -64,23 +63,25 @@ class OllamaPlanningNode(Node):
                 self.send_prompt(self.prompt)
                 self.get_logger().info("Response received: " + self.msg_history[-1]["content"])
                 self.pub_tts.publish(String(data=self.msg_history[-1]["content"]))
-                delay_counter = 1.9*len(self.msg_history[-1]["content"])+20
+                
+                delay_counter = 1.9 * len(self.msg_history[-1]["content"]) + 20
                 while delay_counter > 0 and rclpy.ok():
                     rclpy.spin_once(self, timeout_sec=0)
                     self.get_clock().sleep_for(Duration(seconds=0.05))
                     delay_counter -= 1
+                    
                 self.get_logger().info("Waiting for new prompt")
                 self.new_prompt = False
+                
             rclpy.spin_once(self, timeout_sec=0)
             self.get_clock().sleep_for(Duration(seconds=0.05))
 
 def main(args=None):
     rclpy.init(args=args)
-    ollama_planning_node= OllamaPlanningNode()
+    ollama_planning_node = OllamaPlanningNode()
     ollama_planning_node.spin()
     ollama_planning_node.destroy_node()
     rclpy.shutdown()
 
-    
 if __name__ == '__main__':
     main()
