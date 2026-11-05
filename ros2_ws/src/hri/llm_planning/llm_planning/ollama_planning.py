@@ -22,7 +22,16 @@ class OllamaPlanningNode(Node):
 
     def send_prompt(self, msg, role="user"):
         self.msg_history.append({"role": role, "content": msg})
-        resp = requests.post(self.url_api, json={"model": "llama3", "messages": self.msg_history, "stream":False, "options":{"num_ctx":8192}})
+        resp = requests.post(
+                self.url_api,
+                json={
+                    "model": "gemma4:e2b",
+                    "messages": self.msg_history,
+                    "stream": False,
+                    "think": False,
+                    "options":{"num_ctx":8192}
+                }
+        )
         self.msg_history.append(resp.json()["message"])
 
     def callback_prompt(self, msg):
@@ -52,7 +61,7 @@ class OllamaPlanningNode(Node):
             system_context
         )
         
-        self.get_logger().info("Sending initial context to Llama 3...")
+        self.get_logger().info("Sending initial context to Gemma 4...")
         self.send_prompt(initial_setup, role="system")
         self.get_logger().info("Context initialized. Response: " + self.msg_history[-1]["content"])
         
