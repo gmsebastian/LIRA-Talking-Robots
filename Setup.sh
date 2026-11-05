@@ -27,6 +27,7 @@ python3 -m venv "$VENV_DIR"
 echo "Installing python3 dependencies"
 "$VENV_DIR/bin/pip" install --upgrade pip
 "$VENV_DIR/bin/pip" install faster_whisper
+"$VENV_DIR/bin/pip" install piper-tts
 
 # Define the marker to check for idempotency
 echo "Adding venv packages to $BASHRC"
