@@ -1,57 +1,73 @@
-# Mobile-Robots-2026-2
-Software para el curso "Robots Móviles" de la Facultad de Ingeniería, UNAM, 2026-2
+# LIRA Talking Robots
 
-## Requerimientos
+Este es un repositorio para correr nodos de ROS2 y un LLM local para que los robots interactúen
+con las personas en un evento social.
 
-* Ubuntu 24.04: https://ubuntu.com/download/desktop/thank-you?version=24.04.3&architecture=amd64&lts=true
-* ROS Jazzy Jalisco: https://docs.ros.org/en/jazzy/Installation.html
-* Google DeepMind MuJoCo: https://mujoco.readthedocs.io/en/latest/programming/#building-from-source
-* Webots 2025a: https://github.com/cyberbotics/webots/releases/download/R2025a/webots_2025a_amd64.deb
+## Requisitos
+
+- Ubuntu 22.04 o posterior.
+- [ROS2](https://docs.ros.org/en/humble/Installation.html) (Humble o posterior).
+- [Ollama](https://ollama.com/download).
+
+> [!NOTE]
+> Dado que se ejecuta un LLM localmente, se **recomienda extensivamente** correr este proyecto en
+> un sistema con GPU dedicada; sin embargo, se han logrado buenos resultados con una iGPU
+> Intel Iris Xe TigerLake.
 
 ## Instalación
 
-Nota: se asume que ya se tiene instalado Ubuntu, MuJoCo y ROS.
+Antes de compilar los paquetes de ROS2, es imperativo correr el script `Setup.sh`, el cual
+creará un entorno virtual de Python donde se instalarán las dependencias necesarias.
 
-* $ cd
-* $ git clone https://github.com/mnegretev/Mobile-Robots-2026-2/
-* $ cd Mobile-Robots-2026-2
-* $ sudo apt update
-* $ sudo apt upgrade
-* $ ./Setup.sh
-* $ cd ros2_ws
-* $ echo "alias cb='colcon build && source install/local_setup.bash'" >> ~/.bashrc
-* $ source ~/.bashrc
-* $ cb
+```bash
+./Setup.sh
+```
 
-## Pruebas
+> [!IMPORTANT]
+> Reabrir la teminal después de ejecutar el script anterior.
 
-Para probar que todo se instaló y compiló correctamente:
+Una vez instaladas las dependencias, compilar los tres paquetes de ROS2
 
-* $ cd ~/Mobile-Robots-2026-2/ros2_ws
-* $ cb
-* $ ros2 launch house_simul house_simul.launch.py
-  
-Y en otra terminal:
+```bash
+cd ros2_ws
+colcon build
+source install/setup.bash
+```
 
-* $ cd ~/Mobile-Robots-2026-2/ros2_ws
-* $ cb
-* $ ros2 launch motion_planning motion_planning_utils.launch.py
+Por último, cargar el modelo con ollama. Dependiendo de la conexión a internet, esto puede tardar
+alrededor de 30 minutos.
 
-Si todo se instaló y compiló correctamente, se debería ver un visualizador como el siguiente:
-![rviz](https://github.com/mnegretev/Mobile-Robots-2026-2/blob/main/Media/rviz2.png)
+```bash
+ollama run <modelo>
+```
 
-Un ambiente simulado como el siguiente:
-![gazebo](https://github.com/mnegretev/Mobile-Robots-2026-2/blob/main/Media/gz.png)
+Recomendamos usar `gemma4:e4b` para GPUs dedicadas y `gemma4:e2b` para iGPUs.
 
-Y una GUI como la siguiente:
-![GUIExample](https://github.com/mnegretev/Mobile-Robots-2026-2/blob/main/Media/gui.png)
+## Correr el proyecto
 
-## Contacto
-Dr. Marco Negrete<br>
-Profesor Titular A<br>
-Jefe del Departamento de Procesamiento de Señales<br>
-Facultad de Ingeniería, UNAM <br>
-marco.negrete@ingenieria.unam.edu<br>
-mnegretev.info<br>
-https://mnegretev.info<br>
+Una vez que la instalación se haya completado exitosamente, abrir 4 terminales y correr los
+siguientes comandos:
 
+### Terminal 1
+
+```bash
+ros2 run speech2text faster_whisper_asr
+```
+
+### Terminal 2
+
+```bash
+ros2 run text2speech t2s
+```
+
+### Terminal 3
+
+```bash
+ros2 run llm_planning ollama_planning
+```
+
+### Terminal 4
+
+????
+
+Continuará
