@@ -15,8 +15,8 @@ class TTSSubscriber(Node):
     def __init__(self):
         super().__init__('text_to_speech_subscriber')
         package_path = get_package_share_directory('text2speech')
-        self.model = os.path.join(package_path, "models/es_MX-claude-high.onnx")
-        self.config = os.path.join(package_path, "models/es_MX-claude-high.onnx.json")
+        self.model = os.path.join(package_path, "es_MX-gevy-10196-epoch-high.onnx")
+        self.config = os.path.join(package_path, "es_MX-gevy-10196-epoch-high.onnx.json")
         self.voice = PiperVoice.load(model_path=self.model,config_path=self.config)
         self.syn_config = SynthesisConfig(
             volume=0.5,  # half as loud
