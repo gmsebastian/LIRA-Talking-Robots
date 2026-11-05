@@ -1,5 +1,4 @@
 import pyaudio
-import wave
 import numpy
 from faster_whisper import WhisperModel
 import rclpy
@@ -12,10 +11,15 @@ from std_msgs.msg import String
 #
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
-CHANNELS = 2
-RATE = 44100
+# faster-whisper wants mono float32 at 16 kHz, so capture in that format and hand it
+# the samples directly instead of a file: the file path goes through PyAV's decode_audio,
+# which is broken with av 19 (it passes a metadata_errors kwarg that av.open no longer takes).
+CHANNELS = 1
+RATE = 16000
 RECORD_SECONDS = 5
-WAVE_OUTPUT_FILENAME = "/dev/shm/recorder_audio.wav"
+# Consecutive low-power chunks that end an utterance: ~0.5 s at 16 kHz,
+# the same window 20 chunks gave at the previous 44.1 kHz capture rate.
+SILENCE_CHUNKS = 8
 
 class FasterWhisperNode(Node):
     def __init__(self):
@@ -45,7 +49,7 @@ class FasterWhisperNode(Node):
             self.get_logger().info("Audio detected. Starting to record...")
             no_audio_counter = 0
             frames.append(data)
-            while no_audio_counter < 20 and rclpy.ok():
+            while no_audio_counter < SILENCE_CHUNKS and rclpy.ok():
                 data = stream.read(CHUNK)
                 frames.append(data)
                 arr = numpy.frombuffer(data, dtype=numpy.int16)/32768.0
@@ -56,14 +60,10 @@ class FasterWhisperNode(Node):
                     no_audio_counter = 0
             self.get_logger().info("Stopping audio recording.")
 
-            wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(p.get_sample_size(FORMAT))
-            wf.setframerate(RATE)
-            wf.writeframes(b''.join(frames))
-            wf.close()
+            audio = numpy.frombuffer(b''.join(frames), dtype=numpy.int16)
+            audio = audio.astype(numpy.float32)/32768.0
 
-            segments, info = model.transcribe(WAVE_OUTPUT_FILENAME, beam_size=5, language="es")
+            segments, info = model.transcribe(audio, beam_size=5, language="es")
             self.get_logger().info("Detected language '%s' with probability %f" % (info.language, info.language_probability))
             for segment in segments:
                 self.get_logger().info("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
